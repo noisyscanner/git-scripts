@@ -1,6 +1,9 @@
 #!/usr/bin/env ruby
 
 MIN_COMMIT_LENGTH = 20
+PREFIX = "DATA"
+
+PREFIX_LOW = PREFIX.downcase
 
 $currentBranch = `git rev-parse --abbrev-ref HEAD`
 $commitFileName = ARGV[0]
@@ -13,15 +16,15 @@ def checkTicketNumbers(branch, commit)
 end
 
 def rewriteCommitMsg(lines, ticketNumber, commitMsg)
-	newCommitMsg = "[DATA-#{ticketNumber}] #{commitMsg}"
+	newCommitMsg = "[#{PREFIX}-#{ticketNumber}] #{commitMsg}"
 	lines[0] = newCommitMsg
 	newFileContents = lines.join("")
 	IO.write $commitFileName, newFileContents
 	puts "Commit message corrected to: '#{newCommitMsg.delete("\n")}'"
 end
 
-if /(?:DATA|data)-(\d+)-.+/ =~ $currentBranch
-	# Branch name starts with DATA-xxx, check commit message
+if /(?:#{PREFIX}|#{PREFIX_LOW})-(\d+)-.+/ =~ $currentBranch
+	# Branch name starts with ticket, check commit message
 	branchTicketNumber = $1 # Ticket number from branch
 
   commitFileLines = IO.readlines($commitFileName)
@@ -29,13 +32,13 @@ if /(?:DATA|data)-(\d+)-.+/ =~ $currentBranch
 
 	unless commitMessage.start_with?("Merge")
 		# Check if commit message starts with [DATA-123] and is > 20 chars
-		if /\[DATA-(\d+)\] .{20,}$/ =~ commitMessage
+		if /\[#{PREFIX}-(\d+)\] .{20,}$/ =~ commitMessage
 			# Commit message does match the format, check the ticket numbers match and error if not
 			checkTicketNumbers($1, branchTicketNumber)
 		else
 			# Commit message does not match the format
 			# If DATA is in lowercase or there are extra spaces, we can correct it
-			if /\[(?:data|DATA)-(\d+)\] *(.{20,})$/ =~ commitMessage
+			if /\[(?:#{PREFIX}|#{PREFIX_LOW})-(\d+)\] *(.{20,})$/ =~ commitMessage
 				checkTicketNumbers($1, branchTicketNumber)
 
 				# Valid ticket numbers, reformat the commit message

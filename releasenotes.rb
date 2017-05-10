@@ -1,6 +1,8 @@
 #!/usr/bin/env ruby
 require 'optparse'
 
+PREFIX = "DATA"
+
 # Returns Hash of [ticketNumber => [commit1, commit2, ...]]
 def getDiff(tag1, tag2, timestamps, unique)
   format = timestamps ? "%ci %s" : "%s"
@@ -8,7 +10,7 @@ def getDiff(tag1, tag2, timestamps, unique)
   return Hash[`git log --pretty="#{format}" #{tag1}...#{tag2} #{uniqpipe}`
     .split("\n")
     .map { |msg|
-      ticket = msg.match(/DATA-(\d+)/)
+      ticket = msg.match(/#{PREFIX}-(\d+)/)
       if ticket != nil
         [ticket[0], msg]
       end
