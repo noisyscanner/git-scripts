@@ -1,5 +1,5 @@
-# DPP Scripts
-This repository contains two scripts to aid the generation of release notes files for DPP repositories.
+# Brad's Git Scripts
+This repository contains two scripts to aid committing to and generating relase notes for Git repositories, where feature branches are prefixed with JIRA ticket names.
 
 ## `commit-msg.rb`
 This automatically adds the JIRA ticket prefix to commit messages that are on feature branches prefixed with the ticket number (case insensitive).
