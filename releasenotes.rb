@@ -10,14 +10,35 @@ def getDiff(tag1, tag2, timestamps, unique)
   return Hash[`git log --pretty="#{format}" #{tag1}...#{tag2} #{uniqpipe}`
     .split("\n")
     .map { |msg|
-      ticket = msg.match(/#{PREFIX}-(\d+)/)
+      ticket = msg.match(/DATA-(\d+)/)
       if ticket != nil
-        [ticket[0], msg]
+        if msg.match(/Merge (branch|pull request) .* (into|from)/) == nil
+          # Not a merge commit, so include it
+          submatch = msg.match(/\[?(#{PREFIX}-\d+)\]?[\-|_| ]?(.*)/)
+          if submatch != nil
+            if submatch.captures[1].length > 0
+              [submatch.captures[0], submatch.captures[1]]
+            end
+          else
+            [ticket[0], msg]
+          end
+        end
       end
     }
-    .reject { |e| e == nil || e[1].match(/Merge (branch|pull request) .* (into|from)/) != nil }
+    .reject { |e| e == nil }
     .group_by(&:first)
-    .map { |k, a| [k, a.map(&:last)] }]
+    .map { |k, a|
+      [k, a.map(&:last).uniq]
+    }]
+end
+
+def printDiff(diff)
+  diff.each { |ticket, notes|
+    print('- ' + ticket + ":\n")
+
+    notes.each { |n| print("  - " + n + "\n") }
+    print("\n\n")
+  }
 end
 
 def getOptions(args)
@@ -45,12 +66,15 @@ end
 opts = getOptions(ARGV)
 
 if ARGV.length < 2
-  puts "Usage: releasenotes <tag1> <tag2> [options] (run --help for more info on options)"
+  # puts "Usage: releasenotes <tag1> <tag2> [options] (run --help for more info on options)"
+  # Loop tags
+  tags = `git tag`.split("\n")
+  (tags.length - 1).times do |i|
+    tag1 = tags[i]
+    tag2 = tags[i + 1]
+    puts '##' + tag1 + ":\n\n"
+    printDiff(getDiff(tag1, tag2, opts[:timestamps], opts[:unique]))
+  end
 else
-  getDiff(ARGV[0], ARGV[1], opts[:timestamps], opts[:unique]).each { |ticket, notes|
-    print(ticket + ":\n\n")
-
-    notes.each { |n| print(" - " + n + "\n") }
-    print("\n\n")
-  }
+  printDiff(getDiff(ARGV[0], ARGV[1], opts[:timestamps], opts[:unique]))
 end
