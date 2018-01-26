@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 
 MIN_COMMIT_LENGTH = 20
-PREFIX = "DATA"
+PREFIX = "#"
 
 PREFIX_LOW = PREFIX.downcase
 
@@ -16,35 +16,33 @@ def checkTicketNumbers(branch, commit)
 end
 
 def rewriteCommitMsg(lines, ticketNumber, commitMsg)
-	newCommitMsg = "[#{PREFIX}-#{ticketNumber}] #{commitMsg}"
+	newCommitMsg = "[#{PREFIX}#{ticketNumber}] #{commitMsg}"
 	lines[0] = newCommitMsg
 	newFileContents = lines.join("")
 	IO.write $commitFileName, newFileContents
 	puts "Commit message corrected to: '#{newCommitMsg.delete("\n")}'"
 end
 
-if /(?:#{PREFIX}|#{PREFIX_LOW})-(\d+)-.+/ =~ $currentBranch
-	# Branch name starts with ticket, check commit message
+if /(?:#{PREFIX}|#{PREFIX_LOW})(\d+)-.+/ =~ $currentBranch
+	# Branch name does start with ticket number, check commit message
 	branchTicketNumber = $1 # Ticket number from branch
-
-  commitFileLines = IO.readlines($commitFileName)
+	
+	commitFileLines = IO.readlines($commitFileName)
 	commitMessage = commitFileLines[0]
 
 	unless commitMessage.start_with?("Merge")
-		# Check if commit message starts with [DATA-123] and is > 20 chars
-		if /\[#{PREFIX}-(\d+)\] .{20,}$/ =~ commitMessage
+		# Check if commit message starts with valid ticket number and commit is > 20 chars
+		if /\[#{PREFIX}(\d+)\] .{#{MIN_COMMIT_LENGTH},}$/ =~ commitMessage
 			# Commit message does match the format, check the ticket numbers match and error if not
 			checkTicketNumbers($1, branchTicketNumber)
 		else
 			# Commit message does not match the format
-			# If DATA is in lowercase or there are extra spaces, we can correct it
-			if /\[(?:#{PREFIX}|#{PREFIX_LOW})-(\d+)\] *(.{20,})$/ =~ commitMessage
+			# If the prefix is in lowercase or there are extra spaces, we can correct it
+			if /\[(?:#{PREFIX}|#{PREFIX_LOW})(\d+)\] *(.{#{MIN_COMMIT_LENGTH},})$/ =~ commitMessage
 				checkTicketNumbers($1, branchTicketNumber)
 
-				# Valid ticket numbers, reformat the commit message
 				rewriteCommitMsg(commitFileLines, $1, $2)
 			else
-				# Commit message does not start with the branch name, add it
 				if commitMessage.length < MIN_COMMIT_LENGTH
 					# Commit message too short, error..
 					puts "Commit message must be > #{MIN_COMMIT_LENGTH} chars"
